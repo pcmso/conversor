@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversor de Imagens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0f;
+    --surface: #18181b;
+    --surface2: #222226;
+    --border: #2e2e33;
+    --accent: #e8ff47;
+    --accent-dim: #b8cc2a;
+    --text: #f0f0ee;
+    --muted: #888884;
+    --green: #4ade80;
+    --red: #f87171;
+    --orange: #fb923c;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .mono { font-family: 'Space Mono', monospace; }
+
+  header {
+    padding: 2.5rem 2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .badge {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: 2px;
+    opacity: 0.7;
+  }
+
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  /* DROP ZONE */
+  #dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 4px;
+    padding: 4rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #dropzone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(232,255,71,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  #dropzone:hover, #dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(232,255,71,0.04);
+  }
+
+  #dropzone.dragover {
+    border-style: solid;
+  }
+
+  .drop-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+  }
+
+  .drop-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .drop-sub span {
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  #fileInput { display: none; }
+
+  /* SETTINGS BAR */
+  .settings-bar {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .setting-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .setting-item label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  .setting-item input[type="number"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 4px 8px;
+    width: 72px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .setting-item input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+
+  .setting-item .unit {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* FILE LIST */
+  #fileList {
+    margin-top: 2rem;
+    display: none;
+  }
+
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .list-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .btn-clear {
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: 'Space Mono', monospace;
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+  .btn-clear:hover { color: var(--red); }
+
+  .file-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .file-item {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto auto auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+  }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: color 0.15s, background 0.15s;
+    font-family: 'Space Mono', monospace;
+  }
+  .btn-remove:hover { color: var(--red); background: rgba(248,113,113,0.08); }
+
+  .btn-dl {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 2px;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .btn-dl:hover { border-color: var(--accent); background: rgba(232,255,71,0.06); }
+  .btn-dl:disabled { opacity: 0.2; cursor: not-allowed; }
+
+  .file-item.done { border-color: rgba(74,222,128,0.3); }
+  .file-item.error { border-color: rgba(248,113,113,0.3); }
+  .file-item.processing { border-color: rgba(232,255,71,0.3); }
+
+  .file-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-size {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .file-status {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .status-wait { color: var(--muted); }
+  .status-proc { color: var(--accent); }
+  .status-done { color: var(--green); }
+  .status-error { color: var(--red); }
+  .status-skip { color: var(--orange); }
+
+  /* PROGRESS */
+  #progressSection {
+    margin-top: 2rem;
+    display: none;
+  }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  #progressBar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 99px;
+  }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* STATS */
+  #statsSection {
+    margin-top: 2rem;
+    display: none;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.9rem 1rem;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  /* BUTTONS */
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    border-radius: 2px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e0f;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-dim);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--text);
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .processing .file-name { animation: pulse 1.2s ease infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Conversor &amp; Compressor de Imagens</div>
+  <div class="badge">→ JPG</div>
+</header>
+
+<main>
+
+  <div id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <div class="drop-icon">⬇</div>
+    <div class="drop-title">Arraste suas imagens aqui</div>
+    <div class="drop-sub">ou <span>clique para selecionar</span> — JPG, PNG, WebP, BMP, GIF</div>
+    <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.bmp,.gif,.webp,image/*">
+  </div>
+
+  <div class="settings-bar">
+    <div class="setting-item">
+      <label>Tamanho máx.</label>
+      <input type="number" id="maxSize" value="190" min="10" max="10000">
+      <span class="unit">KB</span>
+    </div>
+    <div class="setting-item" style="margin-left:auto; font-size:12px; color: var(--muted);">
+      Processado 100% no seu navegador — nenhum arquivo é enviado
+    </div>
+  </div>
+
+  <div id="fileList">
+    <div class="list-header">
+      <div class="list-title" id="listTitle">0 arquivos</div>
+      <button class="btn-clear" onclick="clearAll()">limpar tudo</button>
+    </div>
+    <div class="file-grid" id="fileGrid"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnConvert" onclick="startConversion()">Converter tudo</button>
+      <button class="btn btn-secondary" id="btnDownloadAll" onclick="downloadAll()" disabled>Baixar tudo</button>
+    </div>
+  </div>
+
+  <div id="progressSection">
+    <div class="progress-bar-wrap"><div id="progressBar"></div></div>
+    <div class="progress-info">
+      <span id="progressText">0 / 0</span>
+      <span id="progressPct">0%</span>
+    </div>
+  </div>
+
+  <div id="statsSection">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Convertidos</div>
+        <div class="stat-value green" id="statDone">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Erros</div>
+        <div class="stat-value red" id="statErr">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tamanho antes</div>
+        <div class="stat-value" id="statBefore">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tamanho depois</div>
+        <div class="stat-value" id="statAfter">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Redução</div>
+        <div class="stat-value" id="statSaved">—</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>imgpress — processamento local, sem uploads, sem servidores</footer>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileGrid = document.getElementById('fileGrid');
+const fileListSection = document.getElementById('fileList');
+const listTitle = document.getElementById('listTitle');
+const progressSection = document.getElementById('progressSection');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const progressPct = document.getElementById('progressPct');
+const statsSection = document.getElementById('statsSection');
+const btnConvert = document.getElementById('btnConvert');
+
+let files = [];
+let results = [];
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  addFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+function addFiles(newFiles) {
+  const allowed = ['image/jpeg','image/png','image/bmp','image/gif','image/webp'];
+  for (const f of newFiles) {
+    if (!allowed.includes(f.type) && !f.name.match(/\.(jpe?g|png|bmp|gif|webp)$/i)) continue;
+    if (files.find(x => x.name === f.name && x.size === f.size)) continue;
+    files.push(f);
+  }
+  renderList();
+  fileInput.value = '';
+}
+
+function renderList() {
+  if (files.length === 0) { fileListSection.style.display = 'none'; return; }
+  fileListSection.style.display = 'block';
+  listTitle.textContent = `${files.length} arquivo${files.length !== 1 ? 's' : ''}`;
+  fileGrid.innerHTML = '';
+  files.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.id = `item-${i}`;
+    const sizeKB = (f.size / 1024).toFixed(1);
+    item.innerHTML = `
+      <div class="file-name">${f.name}</div>
+      <div class="file-size">${sizeKB} KB</div>
+      <div class="file-status status-wait" id="status-${i}">aguardando</div>
+      <button class="btn-dl" id="dl-${i}" disabled onclick="downloadOne(${i})">↓ baixar</button>
+      <button class="btn-remove" onclick="removeFile(${i})" title="Remover">✕</button>
+    `;
+    fileGrid.appendChild(item);
+  });
+  results = [];
+  const btnDA = document.getElementById('btnDownloadAll');
+  if (btnDA) btnDA.disabled = true;
+  statsSection.style.display = 'none';
+  progressSection.style.display = 'none';
+  progressBar.style.width = '0%';
+}
+
+function clearAll() {
+  files = [];
+  results = [];
+  renderList();
+}
+
+function setStatus(i, cls, text) {
+  const el = document.getElementById(`status-${i}`);
+  const item = document.getElementById(`item-${i}`);
+  if (!el || !item) return;
+  el.className = `file-status status-${cls}`;
+  el.textContent = text;
+  item.className = `file-item ${cls}`;
+  const dlBtn = document.getElementById(`dl-${i}`);
+  if (dlBtn) dlBtn.disabled = (cls !== 'done');
+}
+
+function removeFile(i) {
+  files.splice(i, 1);
+  results = [];
+  renderList();
+}
+
+function downloadOne(i) {
+  const r = results[i];
+  if (!r) return;
+  const url = URL.createObjectURL(r.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = r.name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadAll() {
+  const valid = results.filter(r => r);
+  if (valid.length === 0) return;
+  for (let i = 0; i < valid.length; i++) {
+    const url = URL.createObjectURL(valid[i].blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = valid[i].name;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (i < valid.length - 1) await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+async function compressImage(file, maxKB) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxBytes = maxKB * 1024;
+
+        function makeCanvas(scaleFactor) {
+          const canvas = document.createElement('canvas');
+          const w = Math.max(1, Math.round(img.width * scaleFactor));
+          const h = Math.max(1, Math.round(img.height * scaleFactor));
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          return canvas;
+        }
+
+        function binarySearchQuality(canvas, lo, hi, iters, bestBlob, callback) {
+          if (iters === 0) { callback(bestBlob); return; }
+          const mid = (lo + hi) / 2;
+          canvas.toBlob((blob) => {
+            if (!blob) { callback(bestBlob); return; }
+            if (blob.size <= maxBytes) {
+              binarySearchQuality(canvas, mid, hi, iters - 1, blob, callback);
+            } else {
+              binarySearchQuality(canvas, lo, mid, iters - 1, bestBlob, callback);
+            }
+          }, 'image/jpeg', mid);
+        }
+
+        function tryShrink(scaleFactor, callback) {
+          const canvas = makeCanvas(scaleFactor);
+          canvas.toBlob((blob) => {
+            if (!blob) { callback(null); return; }
+            if (blob.size <= maxBytes) {
+              binarySearchQuality(canvas, 0.01, 0.95, 8, blob, callback);
+            } else if (scaleFactor > 0.05) {
+              tryShrink(scaleFactor * 0.75, callback);
+            } else {
+              callback(blob);
+            }
+          }, 'image/jpeg', 0.01);
+        }
+
+        const canvas = makeCanvas(1.0);
+        binarySearchQuality(canvas, 0.01, 0.95, 8, null, (blob) => {
+          if (blob && blob.size <= maxBytes) {
+            resolve({ blob, finalKB: (blob.size / 1024).toFixed(1), resized: false });
+          } else {
+            tryShrink(0.75, (blob) => {
+              if (!blob) { resolve({ blob: null, error: 'Falha ao processar' }); return; }
+              resolve({ blob, finalKB: (blob.size / 1024).toFixed(1), resized: true });
+            });
+          }
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function startConversion() {
+  if (files.length === 0) return;
+  btnConvert.disabled = true;
+  results = [];
+
+  const maxKB = parseInt(document.getElementById('maxSize').value) || 190;
+
+  progressSection.style.display = 'block';
+  statsSection.style.display = 'none';
+
+  let totalBefore = 0;
+  let totalAfter = 0;
+  let doneCount = 0;
+  let errCount = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    totalBefore += f.size;
+
+    setStatus(i, 'processing', 'processando...');
+
+    const pct = Math.round((i / files.length) * 100);
+    progressBar.style.width = pct + '%';
+    progressText.textContent = `${i} / ${files.length}`;
+    progressPct.textContent = pct + '%';
+
+    await new Promise(r => setTimeout(r, 10)); // yield to UI
+
+    try {
+      const result = await compressImage(f, maxKB);
+      if (!result.blob) throw new Error(result.error || 'Erro desconhecido');
+
+      const outName = f.name.replace(/\.[^.]+$/, '') + '.jpg';
+      results[i] = { name: outName, blob: result.blob };
+
+      totalAfter += result.blob.size;
+      doneCount++;
+
+      const label = result.resized ? `${result.finalKB}KB ↓ reduzido` : `${result.finalKB}KB ✓`;
+      setStatus(i, 'done', label);
+    } catch (err) {
+      errCount++;
+      results[i] = null;
+      setStatus(i, 'error', 'erro');
+    }
+  }
+
+  progressBar.style.width = '100%';
+  progressText.textContent = `${files.length} / ${files.length}`;
+  progressPct.textContent = '100%';
+
+  const saved = totalBefore > 0 ? Math.round((1 - totalAfter / totalBefore) * 100) : 0;
+
+  document.getElementById('statDone').textContent = doneCount;
+  document.getElementById('statErr').textContent = errCount;
+  document.getElementById('statBefore').textContent = formatBytes(totalBefore);
+  document.getElementById('statAfter').textContent = formatBytes(totalAfter);
+  document.getElementById('statSaved').textContent = saved + '%';
+
+  statsSection.style.display = 'block';
+  btnConvert.disabled = false;
+  if (doneCount > 0) document.getElementById('btnDownloadAll').disabled = false;
+}
+
+
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+</script>
+</body>
+</html>
